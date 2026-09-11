@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import dynamic from "next/dynamic";
 import { Search, MapPin, Building2, Phone } from "lucide-react";
 import { PARTNERS_DATA } from "@/data/partnersData";
@@ -11,39 +11,17 @@ const AgencyMap = dynamic(() => import("@/components/AgencyMap"), {
 });
 
 export default function PartnerLocator() {
-  const [partners, setPartners] = useState(PARTNERS_DATA);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedState, setSelectedState] = useState("All");
   const [selectedType, setSelectedType] = useState("All");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(null);
 
-  useEffect(() => {
-    const savedOfflineData = localStorage.getItem("offlinePartners");
-    if (!navigator.onLine && savedOfflineData) {
-      setPartners(JSON.parse(savedOfflineData));
-      return;
-    }
+  const allStates = ["All", ...new Set(PARTNERS_DATA.map((partner) => partner.state))];
+  const allTypes = ["All", ...new Set(PARTNERS_DATA.map((partner) => partner.type))];
+  const allCategories = ["All", ...new Set(PARTNERS_DATA.map((partner) => partner.loanCategory))];
 
-    fetch("/api/partners")
-      .then((response) => response.json())
-      .then((result) => {
-        if (result.success && Array.isArray(result.data)) {
-          setPartners(result.data);
-          localStorage.setItem("offlinePartners", JSON.stringify(result.data));
-        }
-      })
-      .catch(() => {
-        const savedData = localStorage.getItem("offlinePartners");
-        if (savedData) setPartners(JSON.parse(savedData));
-      });
-  }, []);
-
-  const allStates = ["All", ...new Set(partners.map((partner) => partner.state))];
-  const allTypes = ["All", ...new Set(partners.map((partner) => partner.type))];
-  const allCategories = ["All", ...new Set(partners.map((partner) => partner.loanCategory))];
-
-  const filteredPartners = partners.filter(partner => {
+  const filteredPartners = PARTNERS_DATA.filter(partner => {
     const matchesSearch = 
       partner.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       partner.district.toLowerCase().includes(searchQuery.toLowerCase()) ||
