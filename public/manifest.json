@@ -1,0 +1,10 @@
+{
+  "name": "SamruddhiSetu Channel Finance Portal",
+  "short_name": "SamruddhiSetu",
+  "description": "NSFDC Channel Partner Locator and Scheme Recommender",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e3a8a",
+  "orientation": "portrait"
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, Building2, CheckCircle2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import jsPDF from "jspdf";
@@ -35,6 +35,47 @@ export default function SchemeFinder() {
     state: ""
   });
 
+  const DRAFT_KEY = "samruddhisetu_scheme_finder_draft";
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Restore draft
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+
+        const hasActualData = parsed.formData && Object.values(parsed.formData).some((val) => val !== "" && val !== null);
+
+        if (hasActualData) {
+          setFormData(parsed.formData);
+          setStep(parsed.step || 1);
+          setDraftRestored(true);
+
+          setTimeout(() => {
+            setDraftRestored(false);
+          }, 5000);
+        }
+      }
+    } catch (e) {
+      // Corrupted draft - ignore
+    } finally {
+      setIsInitialized(true);
+    }
+  }, []);
+
+  // Auto-save draft
+  useEffect(() => {
+    if (isInitialized && step < 6) {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({ formData, step }));
+      } catch (e) {
+        // Fail silently
+      }
+    }
+  }, [formData, step, isInitialized]);
+
   const [loading, setLoading] = useState(false);
   const [recommendation, setRecommendation] = useState<AIRecommendation | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -45,6 +86,23 @@ export default function SchemeFinder() {
   const prevStep = () => setStep((p) => Math.max(p - 1, 1));
 
   const fetchRecommendation = async () => {
+    if (!navigator.onLine) {
+      const provisionalId = `CFS-PENDING-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+      const queuedApp = {
+        payload: formData,
+        provisionalId,
+        timestamp: new Date().toISOString()
+      };
+
+      const existingQueue = JSON.parse(localStorage.getItem("samruddhisetu_offline_queue") || "[]");
+      existingQueue.push(queuedApp);
+      localStorage.setItem("samruddhisetu_offline_queue", JSON.stringify(existingQueue));
+      localStorage.removeItem(DRAFT_KEY);
+
+      alert(`You are offline. Application saved locally! Provisional ID: ${provisionalId}. It will auto-sync when you reconnect.`);
+      return;
+    }
+
     setLoading(true);
     setStep(6);
     setRecommendation(null);
@@ -215,6 +273,20 @@ export default function SchemeFinder() {
             <h2 className="text-3xl font-bold text-slate-900 mb-2">{langText.title}</h2>
             <p className="text-slate-500">{langText.sub}</p>
           </div>
+
+          {draftRestored && step < 6 && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-4 py-3 mb-6 flex items-center justify-between shadow-sm animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                We restored your saved progress from where you left off.
+              </div>
+              <button onClick={() => setDraftRestored(false)} className="text-amber-600 hover:text-amber-900">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+          )}
 
           <div className="bg-white rounded-2xl shadow-sm border p-8">
             

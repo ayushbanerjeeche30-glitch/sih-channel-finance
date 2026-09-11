@@ -6,6 +6,8 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { Partner } from "@/data/partnersData";
 
+const OFFLINE_TILE = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Crect width='256' height='256' fill='%23f1f5f9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%2394a3b8'%3EUncached Offline Area%3C/text%3E%3C/svg%3E";
+
 // Google-Maps-style teardrop pin, built as inline SVG — no external asset dependency
 function createPinIcon(color: string, size: number) {
   const svg = `
@@ -68,6 +70,7 @@ export default function AgencyMap({ partners, selectedPartnerId }: AgencyMapProp
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        errorTileUrl={OFFLINE_TILE}
       />
       <MapRecenter partners={partners} selectedPartnerId={selectedPartnerId} />
       {partners.map((partner) => (

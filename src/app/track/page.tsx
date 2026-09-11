@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ArrowLeft, Building2, Search, CheckCircle2, Circle, Clock } from "lucide-react";
+import { ArrowLeft, Building2, Search, CheckCircle2, Circle, Clock, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const t = {
@@ -22,11 +22,18 @@ export default function TrackApplication() {
   const [error, setError] = useState("");
   const [app, setApp] = useState<any>(null);
 
+  const [showGrievanceForm, setShowGrievanceForm] = useState(false);
+  const [grievanceMessage, setGrievanceMessage] = useState("");
+  const [grievanceSubmitting, setGrievanceSubmitting] = useState(false);
+  const [grievanceResult, setGrievanceResult] = useState<{ success: boolean; message: string } | null>(null);
+
   const langText = t[language as keyof typeof t] || t["English"];
 
   const handleSearch = async () => {
     setError("");
     setApp(null);
+    setGrievanceResult(null);
+    setShowGrievanceForm(false);
 
     if (!appId.trim() || !phone.trim()) {
       setError("Please enter both your Application ID and registered mobile number.");
@@ -52,6 +59,36 @@ export default function TrackApplication() {
     }
   };
 
+  const handleGrievanceSubmit = async () => {
+    if (!grievanceMessage.trim()) return;
+    setGrievanceSubmitting(true);
+    setGrievanceResult(null);
+
+    try {
+      const res = await fetch('/api/grievance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          application_id: appId.trim(),
+          applicant_phone: phone.trim(),
+          message: grievanceMessage.trim(),
+        }),
+      });
+      const result = await res.json();
+      setGrievanceResult({ success: result.success, message: result.message });
+      if (result.success) {
+        setGrievanceMessage("");
+        setShowGrievanceForm(false);
+        // Refresh the application to show updated escalation level
+        handleSearch();
+      }
+    } catch (err) {
+      setGrievanceResult({ success: false, message: "Something went wrong. Please try again." });
+    } finally {
+      setGrievanceSubmitting(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Submitted": return <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-bold">Submitted</span>;
@@ -62,11 +99,20 @@ export default function TrackApplication() {
     }
   };
 
+  const getEscalationBadge = (level: string) => {
+    if (!level || level === "Normal") return null;
+    const isCritical = level.includes("Level 2");
+    return (
+      <span className={`inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full ${isCritical ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+        <AlertTriangle size={12} /> {level}
+      </span>
+    );
+  };
+
   const currentStageIndex = app ? stages.indexOf(app.status) : -1;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      {/* Top Government Bar with 5 Languages */}
       <div className="bg-slate-900 text-white text-xs py-2 px-4 md:px-8 flex flex-col sm:flex-row justify-between items-center gap-2">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-orange-500"></span>
@@ -88,7 +134,6 @@ export default function TrackApplication() {
         </div>
       </div>
 
-      {/* Header with State Emblem */}
       <header className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-4">
           <a href="/" className="p-2 hover:bg-slate-100 rounded-full transition-colors">
@@ -121,7 +166,6 @@ export default function TrackApplication() {
           <p className="text-slate-500">{langText.sub}</p>
         </div>
 
-        {/* Secure lookup form — two fields required */}
         <div className="bg-white border rounded-2xl p-6 shadow-sm mb-8 space-y-4">
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1">Application ID</label>
@@ -154,10 +198,9 @@ export default function TrackApplication() {
           {error && <p className="text-red-500 text-sm">{error}</p>}
         </div>
 
-        {/* Result card — only shown after a successful, verified lookup */}
         {app && (
-          <div className="bg-white border rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div className="bg-white border rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow mb-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
               <div>
                 <div className="text-xs text-slate-500 font-semibold tracking-wider mb-1">REFERENCE</div>
                 <div className="text-xl font-bold text-[#1e3a8a] mb-1">{app.application_id}</div>
@@ -166,6 +209,7 @@ export default function TrackApplication() {
               </div>
               <div className="flex flex-col items-start md:items-end gap-2">
                 {getStatusBadge(app.status)}
+                {getEscalationBadge(app.escalation_level)}
                 {app.amount && (
                   <div className="text-right">
                     <div className="text-2xl font-bold text-slate-900">₹ {app.amount.toLocaleString('en-IN')}</div>
@@ -175,7 +219,7 @@ export default function TrackApplication() {
               </div>
             </div>
 
-            <div className="relative flex justify-between items-start mb-8">
+            <div className="relative flex justify-between items-start mb-6">
               <div className="absolute top-3 left-6 right-6 h-0.5 bg-slate-200 -z-10"></div>
               {stages.map((stage, index) => {
                 const isCompleted = index < currentStageIndex;
@@ -204,11 +248,51 @@ export default function TrackApplication() {
             </div>
 
             {app.partner_name && (
-              <div className="pt-4 border-t flex items-center gap-2 text-sm text-slate-600">
+              <div className="pt-4 border-t flex items-center gap-2 text-sm text-slate-600 mb-4">
                 <Building2 size={16} className="text-slate-400" />
                 <span>Channel Partner: <strong>{app.partner_name}</strong></span>
               </div>
             )}
+
+            {/* Grievance section */}
+            <div className="pt-4 border-t">
+              {!showGrievanceForm ? (
+                <button
+                  onClick={() => setShowGrievanceForm(true)}
+                  className="text-sm text-red-600 font-semibold hover:underline flex items-center gap-1.5"
+                >
+                  <AlertTriangle size={14} /> Facing a delay or issue? Raise a grievance
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-slate-700 block">Describe your issue</label>
+                  <textarea
+                    value={grievanceMessage}
+                    onChange={(e) => setGrievanceMessage(e.target.value)}
+                    placeholder="e.g. My application has been under review for over 3 weeks with no update."
+                    className="w-full p-3 border-2 rounded-xl text-sm focus:outline-none focus:border-red-500 min-h-[80px]"
+                  />
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleGrievanceSubmit}
+                      disabled={grievanceSubmitting || !grievanceMessage.trim()}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      {grievanceSubmitting ? "Submitting..." : "Submit Grievance"}
+                    </Button>
+                    <Button variant="ghost" onClick={() => setShowGrievanceForm(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {grievanceResult && (
+                <p className={`text-sm mt-3 ${grievanceResult.success ? "text-green-600" : "text-red-500"}`}>
+                  {grievanceResult.message}
+                </p>
+              )}
+            </div>
           </div>
         )}
       </main>

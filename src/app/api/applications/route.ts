@@ -36,12 +36,16 @@ export async function GET(request: Request) {
     );
   }
 
+    console.log('Searching for:', JSON.stringify({ appId: appId.trim(), phone: phone.trim() }));
+
   const { data, error } = await supabase
     .from('applications')
     .select('*')
     .eq('application_id', appId.trim())
     .eq('applicant_phone', phone.trim())
     .single();
+
+  console.log('Supabase result:', JSON.stringify({ data, error }));
 
   if (error || !data) {
     // Same message either way — don't reveal whether the ID or phone was wrong
@@ -73,8 +77,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Longer, harder-to-guess tracking ID — 6 digits instead of 4
+       // Longer, harder-to-guess tracking ID — 6 digits instead of 4
     const generatedId = `SS-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const submittedDate = new Date();
+    const slaDate = new Date(submittedDate);
+    slaDate.setDate(slaDate.getDate() + 14);
 
     const { data, error } = await supabase
       .from('applications')
@@ -84,7 +92,9 @@ export async function POST(request: Request) {
         application_id: generatedId,
         status: 'Submitted',
         partner_name: body.partner_name,
-        submitted_date: new Date().toISOString().split('T')[0]
+        submitted_date: submittedDate.toISOString().split('T')[0],
+        sla_due_date: slaDate.toISOString().split('T')[0],
+        escalation_level: 'Normal'
       }])
       .select()
       .single();
