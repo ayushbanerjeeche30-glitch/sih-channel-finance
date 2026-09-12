@@ -28,6 +28,10 @@ CRITICAL: Return ONLY a flat JSON object. Do not wrap it in another object.
   "incomeThreshold": "₹3,00,000",
   "reasoning": "1-2 sentences explaining why they are eligible or not.",
   "eligible": true or false,
+  "requiredDocuments": [
+    "Document name 1",
+    "Document name 2"
+  ],
   "alternatives": [
     {
       "schemeName": "Alternative Scheme Name",
@@ -38,7 +42,8 @@ CRITICAL: Return ONLY a flat JSON object. Do not wrap it in another object.
     }
   ]
 }
-IMPORTANT: If eligible is false, you MUST provide 1-2 items in the alternatives array. If eligible is true, alternatives should be an empty array [].`;
+IMPORTANT: If eligible is false, you MUST provide 1-2 items in the alternatives array. If eligible is true, alternatives should be an empty array [].
+IMPORTANT: requiredDocuments MUST always be provided (5-8 realistic items), regardless of eligibility, so the applicant knows what to prepare. Include standard KYC (e.g. Aadhaar Card, Caste Certificate, Income Certificate) plus anything specific to this scheme (e.g. project quotation, bank statements, admission letter for education loans).`;
 
     if (body.voiceTranscript) {
       prompt = `A beneficiary spoke this text: "${body.voiceTranscript}".
@@ -128,6 +133,9 @@ ${schemaInstructions}`;
       reasoning: parsed.reasoning || "Based on the details, this is the closest match.",
       eligible,
       alternatives: safeAlternatives,
+      requiredDocuments: Array.isArray(parsed.requiredDocuments) && parsed.requiredDocuments.length > 0
+        ? parsed.requiredDocuments
+        : ["Aadhaar Card", "Caste Certificate", "Income Certificate", "Bank Passbook", "Passport-size Photograph"],
       // Debug-only fields — safe to remove before final submission, but useful now
       // to see in your browser Network tab whether voice parsing extracted sane numbers.
       _debugExtracted: body.voiceTranscript ? {

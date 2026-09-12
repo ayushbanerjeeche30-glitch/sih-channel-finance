@@ -10,7 +10,7 @@ const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabase
 export async function POST(request: Request) {
   try {
     // ADDED: Destructure the new page context variables sent from the frontend widget
-    const { message, language, history, pagePath, pageContent } = await request.json();
+    const { message, language, history, pagePath, pageContent, detectedScript } = await request.json();
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json(
@@ -24,11 +24,24 @@ export async function POST(request: Request) {
       ? `\n\nContext: The user is currently on the page "${pagePath}". Here is the exact text visible on their screen:\n"""\n${pageContent}\n"""\nUse this context to answer their question based on what they are seeing.`
       : '';
 
-    const languageRule = `Final language rule: Identify the language used in the latest user message and write every explanatory word in that same language only. Do not translate the answer into English. Ignore the language of the page context and previous messages. Keep names, numbers, and official scheme names unchanged when needed.`;
+    const scriptHint = detectedScript
+      ? `The user's latest message is written in: ${detectedScript}.`
+      : '';
 
-    const systemInstruction = `You are the official SamruddhiSetu AI assistant for Channel Finance support for Scheduled Caste (SC) beneficiaries in India.
+    const languageRule = `LANGUAGE RULE — this overrides everything else in this prompt and must be followed exactly:
+Look ONLY at the user's latest message. Completely ignore the language of the page context text below — that's just whatever UI language the page happens to be displaying and is NOT a signal for your reply language.
+${scriptHint}
+- If the latest message is in Latin/English script with ordinary English words and grammar, reply in English. This is your DEFAULT. Do not switch to Hindi or any other language just because the topic is an Indian government scheme, and do not treat "safe default" as meaning Hindi.
+- If the latest message is in Devanagari script, reply in Hindi.
+- If the latest message is Hinglish (Hindi words spelled in Latin letters, e.g. "loan kaise milega"), reply in Hinglish using Latin script, not Devanagari, not English.
+- If the latest message is in Bengali, Tamil, Urdu, Marathi, or another Indian language/script, reply in that same language and script.
+Never default to Hindi as a "safe" choice for an Indian government topic. An English message always gets an English answer.`;
 
-  Be warm and approachable like a helpful friend, while remaining professional and respectful like a government helpdesk officer. Detect the language of the latest user message and answer exclusively in that language. Do not use English or any other language in the answer unless the latest user message itself uses that language or contains a proper name, official scheme name, number, or unavoidable technical term. The latest user message determines the response language, even if earlier messages used another language or the request is multilingual; use the dominant language in a multilingual message. Answer the user's exact latest question directly and use the conversation context when it is relevant. If the user asks for a specific detail, give a specific answer instead of a generic introduction. Do not repeat your identity or background unless asked.
+    const systemInstruction = `${languageRule}
+
+You are the official SamruddhiSetu AI assistant for Channel Finance support for Scheduled Caste (SC) beneficiaries in India.
+
+Be warm and approachable like a helpful friend, while remaining professional and respectful like a government helpdesk officer. Answer the user's exact latest question directly and use the conversation context when it is relevant. If the user asks for a specific detail, give a specific answer instead of a generic introduction. Do not repeat your identity or background unless asked.
 
 Always answer using clear bullet points, never paragraphs. Put one simple idea in each point and leave a line break between points. Keep the response short, usually 2 to 5 points. Use easy everyday words for people with basic education. Avoid technical or official jargon; explain any necessary difficult word in simple language. Be fully informative, include relevant eligibility limits, interest rates, and next steps, and ask at most one clarifying question when needed. Never use bold formatting, asterisks, or double asterisks such as **text**.
 
@@ -36,7 +49,7 @@ Only answer questions about SamruddhiSetu, loan schemes, eligibility, interest r
 
 ${pageContext}
 
-${languageRule}`;
+Reminder: apply the LANGUAGE RULE from the top of this prompt to your reply now.`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.1-flash-lite', 

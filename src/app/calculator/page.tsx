@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Building2, Info, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -19,16 +20,57 @@ const schemes = [
   { id: "edu", name: "Educational Loan Scheme", maxLoan: 3000000, baseRateFemale: 6.5, moratorium: 12 },
 ];
 
-export default function EMICalculator() {
+function EMICalculatorInner() {
+  const searchParams = useSearchParams();
+
+  const recommendedScheme = useMemo(() => {
+    const name = searchParams.get("scheme");
+    const rateParam = searchParams.get("rate");
+    const maxLoanParam = searchParams.get("maxLoan");
+    if (!rateParam) return null;
+
+    const rate = parseFloat(rateParam);
+    if (Number.isNaN(rate)) return null;
+
+    return {
+      id: "ai-recommended",
+      name: name || "Your Recommended Scheme",
+      maxLoan: maxLoanParam ? parseInt(maxLoanParam, 10) : 500000,
+      baseRateFemale: rate,
+      moratorium: 3,
+      locked: true,
+    };
+  }, [searchParams]);
+
+  const allSchemes = useMemo(
+    () => (recommendedScheme ? [recommendedScheme, ...schemes] : schemes),
+    [recommendedScheme]
+  );
+
   const [language, setLanguage] = useState("English");
   const [activeTab, setActiveTab] = useState("calculator");
-  const [selectedScheme, setSelectedScheme] = useState(schemes[0]);
+  const [selectedScheme, setSelectedScheme] = useState(allSchemes[0]);
+
+  useEffect(() => {
+    if (recommendedScheme) {
+      setSelectedScheme(recommendedScheme);
+      const amountParam = searchParams.get("amount");
+      if (amountParam) {
+        setLoanAmount(Math.min(parseInt(amountParam, 10), recommendedScheme.maxLoan));
+      }
+    }
+    // run once on mount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [loanAmount, setLoanAmount] = useState(0);
   const [tenure, setTenure] = useState(48);
   const [gender, setGender] = useState("Female");
 
   const langText = t[language as keyof typeof t] || t["English"];
-  const appliedRate = gender === "Female" ? selectedScheme.baseRateFemale : selectedScheme.baseRateFemale + 1.0;
+  const appliedRate = selectedScheme.locked
+    ? selectedScheme.baseRateFemale
+    : gender === "Female" ? selectedScheme.baseRateFemale : selectedScheme.baseRateFemale + 1.0;
   
   const principal = loanAmount || 0;
   const ratePerMonth = appliedRate / 12 / 100;
@@ -427,5 +469,13 @@ export default function EMICalculator() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function EMICalculator() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-slate-400">Loading calculator...</div>}>
+      <EMICalculatorInner />
+    </Suspense>
   );
 }

@@ -4,6 +4,14 @@ import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { MessageCircle, X, Send, Bot } from "lucide-react";
 
+function detectScript(text: string): string {
+  if (/[\u0900-\u097F]/.test(text)) return "Devanagari script (Hindi/Marathi)";
+  if (/[\u0980-\u09FF]/.test(text)) return "Bengali script";
+  if (/[\u0B80-\u0BFF]/.test(text)) return "Tamil script";
+  if (/[\u0600-\u06FF]/.test(text)) return "Arabic script (Urdu)";
+  return "Latin script (likely English or Romanized/Hinglish)";
+}
+
 export default function PageAssistant() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
@@ -42,7 +50,8 @@ export default function PageAssistant() {
           message: userMessage, 
           history: currentHistory,
           pagePath: pathname,
-          pageContent: pageContent 
+          pageContent: pageContent,
+          detectedScript: detectScript(userMessage),
         }),
       });
       const data = await res.json();
