@@ -272,4 +272,17 @@ export default function ApprovalCoach() {
                     {result.suggestions.map((s, i) => (
                       <div key={i} className="flex justify-between items-center p-4 border rounded-xl bg-slate-50">
                         <span className="text-sm text-slate-700 pr-4">{s.action}</span>
-                        <span className="text-sm font-bold text-green-600
+                        <span className="text-sm font-bold text-green-600 whitespace-nowrap">→ {s.newProbability}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
