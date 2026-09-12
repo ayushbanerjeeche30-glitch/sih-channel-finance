@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 // 1. Changed the import to use the file you actually have
@@ -20,12 +20,14 @@ export const metadata: Metadata = {
   title: "SamruddhiSetu — Channel Finance System",
   description: "Channel Finance System for SC Beneficiaries",
   manifest: "/manifest.json",
-  themeColor: "#1e3a8a",
+  
   icons: {
     icon: "https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg",
   },
 };
-
+   export const viewport: Viewport = {
+     themeColor: "#1e3a8a",
+   };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
