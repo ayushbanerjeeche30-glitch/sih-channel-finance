@@ -159,7 +159,7 @@ const translations = {
 
     explore: "অন্বেষণ করুন",
     resources: "সম্পদ",
-    footerDesc: "এসসি সুবিধাভোগীদের জন্য চ্যানেল ফাইন্যান্স সিস্টেম। স্মার্ট ইন্ডিয়া হ্যাকাথনের জন্য তৈরি প্রোটোটाइপ।"
+    footerDesc: "এসসি সুবিধাভোগীদের জন্য চ্যানেল ফাইন্যান্স সিস্টেম। স্মার্ট ইন্ডিয়া হ্যাকাথনের জন্য তৈরি প্রোটোটাইপ।"
   },
   "தமிழ்": {
     heroTitle: "ஒவ்வொரு தகுதியான SC குடும்பத்திற்கும் சலுகை கடன் — எந்த யூகமும் இல்லாமல்",
@@ -266,6 +266,7 @@ export default function Home() {
           <a href="/calculator" className="hover:text-[#1e3a8a] transition-colors">EMI Calculator</a>
           <a href="/locator" className="hover:text-[#1e3a8a] transition-colors">Partner Locator</a>
           <a href="/track" className="hover:text-[#1e3a8a] transition-colors">Track Application</a>
+          <a href="/approval-coach" className="hover:text-[#1e3a8a] transition-colors">Approval Coach</a>
           <a href="/impact" className="hover:text-[#1e3a8a] transition-colors">Impact</a>
         </div>
 
