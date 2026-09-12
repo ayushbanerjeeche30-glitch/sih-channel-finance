@@ -33,6 +33,35 @@ interface AgencyMapProps {
   selectedPartnerId?: number | null;
 }
 
+// NEW: forces Leaflet to recompute its container size right after mount,
+// instead of waiting for a real window resize (which is what opening
+// DevTools was accidentally triggering before).
+function MapSizeFix() {
+  const map = useMap();
+
+  useEffect(() => {
+    const container = map.getContainer();
+
+    map.invalidateSize();
+
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    resizeObserver.observe(container);
+
+    const t1 = setTimeout(() => map.invalidateSize(), 100);
+    const t2 = setTimeout(() => map.invalidateSize(), 600);
+
+    return () => {
+      resizeObserver.disconnect();
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [map]);
+
+  return null;
+}
+
 function MapRecenter({ partners, selectedPartnerId }: { partners: Partner[]; selectedPartnerId?: number | null }) {
   const map = useMap();
 
@@ -72,6 +101,7 @@ export default function AgencyMap({ partners, selectedPartnerId }: AgencyMapProp
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         errorTileUrl={OFFLINE_TILE}
       />
+      <MapSizeFix />
       <MapRecenter partners={partners} selectedPartnerId={selectedPartnerId} />
       {partners.map((partner) => (
         <Marker
