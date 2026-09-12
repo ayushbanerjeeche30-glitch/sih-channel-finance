@@ -13,7 +13,16 @@ const t = {
   "தமிழ்": { title: "நிதி மற்றும் EMI கால்குलेटर", sub: "திட்டம் சார்ந்த வட்டி, தள்ளிவைப்பு கையாளுதல்.", calc: "கால்குलेटर", comp: "ஒப்பீடு" }
 };
 
-const schemes = [
+interface Scheme {
+  id: string;
+  name: string;
+  maxLoan: number;
+  baseRateFemale: number;
+  moratorium: number;
+  locked?: boolean;
+}
+
+const schemes: Scheme[] = [
   { id: "micro", name: "Micro Finance Scheme", maxLoan: 140000, baseRateFemale: 5.5, moratorium: 3 },
   { id: "mahila", name: "Mahila Samriddhi Yojana", maxLoan: 140000, baseRateFemale: 4.0, moratorium: 3 },
   { id: "term", name: "Term Loan Scheme", maxLoan: 5000000, baseRateFemale: 9.0, moratorium: 6 },
@@ -23,7 +32,7 @@ const schemes = [
 function EMICalculatorInner() {
   const searchParams = useSearchParams();
 
-  const recommendedScheme = useMemo(() => {
+  const recommendedScheme = useMemo<Scheme | null>(() => {
     const name = searchParams.get("scheme");
     const rateParam = searchParams.get("rate");
     const maxLoanParam = searchParams.get("maxLoan");
@@ -49,7 +58,7 @@ function EMICalculatorInner() {
 
   const [language, setLanguage] = useState("English");
   const [activeTab, setActiveTab] = useState("calculator");
-  const [selectedScheme, setSelectedScheme] = useState(allSchemes[0]);
+  const [selectedScheme, setSelectedScheme] = useState<Scheme>(allSchemes[0]);
 
   useEffect(() => {
     if (recommendedScheme) {
