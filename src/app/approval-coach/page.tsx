@@ -52,16 +52,28 @@ export default function ApprovalCoach() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
-      const data = await response.json();
+
+      const rawText = await response.text();
+      let data: any;
+
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        setError(
+          "SERVER ERROR (status " + response.status + "): " + rawText.slice(0, 800)
+        );
+        setLoading(false);
+        return;
+      }
 
       if (data.success) {
         setResult(data.result);
       } else {
-        setError(data.error || "Could not analyze approval readiness right now.");
+        setError("API ERROR: " + (data.error || "Unknown error from server."));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("An error occurred while analyzing your readiness.");
+      setError("NETWORK ERROR: " + (err?.message || String(err)));
     } finally {
       setLoading(false);
     }
@@ -226,8 +238,8 @@ export default function ApprovalCoach() {
             </Button>
 
             {error && (
-              <div className="text-center">
-                <p className="text-red-500 font-medium">{error}</p>
+              <div className="text-center bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-600 font-mono text-xs whitespace-pre-wrap break-words text-left">{error}</p>
                 <Button onClick={handleSubmit} className="mt-4 bg-[#1e3a8a] text-white">
                   Try again
                 </Button>
