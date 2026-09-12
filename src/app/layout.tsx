@@ -1,10 +1,10 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-// 1. Changed the import to use the file you actually have
 import PageAssistant from "@/components/PageAssistant"; 
 import NetworkStatus from "@/components/NetworkStatus";
 import ServiceWorkerRegistry from "@/components/ServiceWorkerRegistry";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,14 +20,12 @@ export const metadata: Metadata = {
   title: "SamruddhiSetu — Channel Finance System",
   description: "Channel Finance System for SC Beneficiaries",
   manifest: "/manifest.json",
-  
+  themeColor: "#1e3a8a",
   icons: {
     icon: "https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg",
   },
 };
-   export const viewport: Viewport = {
-     themeColor: "#1e3a8a",
-   };
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -38,8 +36,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ServiceWorkerRegistry />
         <NetworkStatus />
         {children}
-        {/* 2. Replaced the missing widget with your actual component */}
         <PageAssistant />
+        <ThemeToggle />
       </body>
     </html>
   );
