@@ -113,6 +113,41 @@ interface AIRecommendation {
   reasoning: string;
   eligible: boolean;
   alternatives?: AlternativeScheme[];
+  requiredDocuments?: string[];
+}
+
+function parseCurrencyToNumber(value?: string): number | null {
+  if (!value) return null;
+  const digits = value.replace(/[^\d]/g, "");
+  return digits ? parseInt(digits, 10) : null;
+}
+
+function parseRateToNumber(value?: string): number | null {
+  if (!value) return null;
+  const match = value.match(/[\d.]+/);
+  return match ? parseFloat(match[0]) : null;
+}
+
+function getBestVoice(langCode: string): SpeechSynthesisVoice | null {
+  if (typeof window === "undefined" || !window.speechSynthesis) return null;
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length === 0) return null;
+  const prefix = langCode.split("-")[0];
+  return voices.find((v) => v.lang.toLowerCase().startsWith(prefix)) || null;
+}
+
+function buildCalculatorUrl(recommendation: AIRecommendation | null, cost: number) {
+  const params = new URLSearchParams();
+  if (recommendation) {
+    if (recommendation.schemeName) params.set("scheme", recommendation.schemeName);
+    const rate = parseRateToNumber(recommendation.interestRate);
+    if (rate !== null) params.set("rate", String(rate));
+    const maxLoan = parseCurrencyToNumber(recommendation.maxLoanAmount);
+    if (maxLoan !== null) params.set("maxLoan", String(maxLoan));
+  }
+  if (cost) params.set("amount", String(cost));
+  const qs = params.toString();
+  return qs ? `/calculator?${qs}` : "/calculator";
 }
 
 export default function SchemeFinder() {
@@ -161,6 +196,49 @@ export default function SchemeFinder() {
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const langText = t[language as keyof typeof t] || t["English"];
+
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceUnavailable, setVoiceUnavailable] = useState(false);
+
+  const speakRecommendation = (rec: AIRecommendation) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+    window.speechSynthesis.cancel();
+    setVoiceUnavailable(false);
+
+    const eligibleText = rec.eligible ? langText.eligibleBadge : langText.notEligibleBadge;
+    const summary = `${rec.schemeName}. ${eligibleText}. ${langText.maxLoanLabel}: ${rec.maxLoanAmount}. ${langText.intRate}: ${rec.interestRate}. ${rec.reasoning}`;
+
+    const targetLangCode = langCodes[language] || "en-IN";
+    const matchedVoice = getBestVoice(targetLangCode);
+
+    const utterance = new SpeechSynthesisUtterance(summary);
+    if (matchedVoice) {
+      utterance.voice = matchedVoice;
+      utterance.lang = matchedVoice.lang;
+    } else {
+      utterance.lang = "en-IN";
+      setVoiceUnavailable(true);
+    }
+
+    utterance.rate = 0.95;
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const stopSpeaking = () => {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setIsSpeaking(false);
+  };
+
+  useEffect(() => {
+    return () => stopSpeaking();
+  }, []);
 
   const nextStep = () => setStep((p) => Math.min(p + 1, 6));
   const prevStep = () => setStep((p) => Math.max(p - 1, 1));
@@ -236,6 +314,29 @@ export default function SchemeFinder() {
       const reasoningLines = doc.splitTextToSize(recommendation.reasoning, pageWidth - 30);
       doc.text(reasoningLines, 15, y);
       y += reasoningLines.length * 6 + 4;
+
+      if (recommendation.requiredDocuments && recommendation.requiredDocuments.length > 0) {
+        // Start a fresh page if there's not enough room left
+        if (y > 250) {
+          doc.addPage();
+          y = 20;
+        }
+
+        y += 6;
+        doc.setFont("helvetica", "bold"); doc.setFontSize(12);
+        doc.text("Required Documents", 15, y); y += 8;
+
+        doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+        recommendation.requiredDocuments.forEach((docName) => {
+          if (y > 275) {
+            doc.addPage();
+            y = 20;
+          }
+          doc.text(`•  ${docName}`, 18, y);
+          y += 6;
+        });
+        y += 4;
+      }
     }
 
     doc.setFontSize(8); doc.setTextColor(150);
@@ -612,7 +713,7 @@ export default function SchemeFinder() {
                     </div>
 
                     <div className="flex gap-4 mb-4">
-                      <a href="/calculator" className="flex-1">
+                      <a href={buildCalculatorUrl(recommendation, formData.cost)} className="flex-1">
                         <Button className="w-full bg-[#1e3a8a] hover:bg-blue-800 text-white py-6">
                           {langText.proceedCalc} <ArrowRight size={16} className="ml-2"/>
                         </Button>
